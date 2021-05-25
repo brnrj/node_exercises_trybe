@@ -2,6 +2,7 @@ const express = require('express');
 const rescue = require('express-rescue');
 const bodyParser = require('body-parser');
 const { readFile, writeFile } = require('./fs-utils');
+const auth = require('./middleware')
 
 const app = express();
 const port = 3000;
@@ -9,38 +10,65 @@ const port = 3000;
 app.use(bodyParser.json());
 
 //Exercício 1
-app.get('/ping', (_req, res) => {
-  res.send({ message: 'pong' });
+app.get('/ping', (req, res) => {
+  try {
+    auth(req)
+    res.send({ message: 'pong' });
+  } catch (error) {
+    res.status(401).json({ message: error.message })
+  }
 });
 
 //Exercício 2
 app.post('/hello', (req, res) => {
   const { name } = req.body;
-  res.send({ message: `Hello, ${name}` });
+  try {
+    auth(req)
+    res.send({ message: `Hello, ${name}` });
+  } catch (error) {
+    res.status(401).json({ message: error.message })
+  }
+  
 });
 
 //Exercício 3
 app.post('/greeting', (req, res) => {
   const { name, age } = req.body;
-  age > 17
-    ? res.status(200).send({ message: `Hello, ${name}!` })
-    : res.status(401).send({ message: 'Unauthorized' });
+  try {
+    auth(req)
+    age > 17
+      ? res.status(200).send({ message: `Hello, ${name}!` })
+      : res.status(401).send({ message: 'Unauthorized' });
+  } catch (error) {
+    res.status(401).json({ message: error.message })
+  }
 });
 
 //Exercício 4
 app.put('/users/:name/:age', (req, res) => {
   const { name, age } = req.params;
-  res
+  try {
+    auth(req)
+    res
     .status(200)
     .send({ message: `Seu nome é ${name} e você tem ${age} anos de idade.` });
+  } catch (error) {
+    res.status(401).json({ message: error.message })
+  }
+  
 });
 
 //Exercícios 5-6
 app.get(
   '/simpsons',
-  rescue(async (_req, res) => {
-    const simpsons = await readFile();
-    res.status(200).json(simpsons);
+  rescue(async (req, res) => {
+    try {
+      auth(req)
+      const simpsons = await readFile();
+      res.status(200).json(simpsons);
+    } catch (error) {
+      res.status(401).json({ message: error.message })
+    }
   })
 );
 
@@ -49,10 +77,15 @@ app.get(
   '/simpsons/:id',
   rescue(async (req, res) => {
     const { id } = req.params;
-    const simpson = await readFile();
-    const char = simpson.find((element) => element.id === id);
-    if (!char) return res.status(404).json({ message: 'simpson not found' });
-    return res.status(200).send(char);
+    try {
+      auth(req)
+      const simpson = await readFile();
+      const char = simpson.find((element) => element.id === id);
+      if (!char) return res.status(404).json({ message: 'simpson not found' });
+      return res.status(200).send(char);
+    } catch (error) {
+      res.status(401).json({ message: error.message })
+    }
   })
 );
 
@@ -61,13 +94,19 @@ app.post(
   '/simpsons',
   rescue(async (req, res) => {
     const { id, name } = req.body;
-    const data = await readFile();
-    if (data.some((element) => element.id === id)) {
+    try {
+      auth(req)
+      const data = await readFile();
+      if (data.some((element) => element.id === id)) {
       return res.status(409).send({ message: 'id already exists' });
     }
     data.push({ id: data.length + 1, name });
     writeFile(data);
     return res.status(204).end();
+    } catch (error) {
+      res.status(401).json({ message: error.message })
+    }
+    
   })
 );
 
