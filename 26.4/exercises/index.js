@@ -1,7 +1,7 @@
 const express = require('express');
 const rescue = require('express-rescue');
 const bodyParser = require('body-parser');
-const { readFile, writeFile } = require('./fs-utils');
+const { readFile, writeFile, generateToken } = require('./fs-utils');
 const auth = require('./middleware')
 
 const app = express();
@@ -109,6 +109,21 @@ app.post(
     
   })
 );
+
+//Bônus 2
+
+app.post('/signup', rescue(async (req, res) => {
+  const { email, password, firstName, phone } = req.body;
+  const token = generateToken()
+  try {
+    if(!email || !password || !firstName || !phone){
+      return res.status(401).json({ message: 'missing fields' })
+    }return res.status(200).json({ message: token})
+  } catch (error) {
+    res.status(401).json({ message: error.message })
+  }
+  
+}))
 
 app.listen(port, () => {
   console.log('Online');
